@@ -42,13 +42,16 @@ model College {
   password     String
   address      String?
 
+
   affiliated_university   String
   deemed_university       String
   recognition_status      String
   institute_code          String?
   council_issuing_code    String
 
-  role      UserRole @default(COLLEGE)
+  role                    UserRole @default(COLLEGE)
+
+  remark                  String?
 
 
   superAdminId String

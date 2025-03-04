@@ -14,33 +14,39 @@ const roleRoutes: Record<string, string[]> = {
 
 export async function middleware(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const pathname = req.nextUrl.pathname;
 
-  const pathname = req.nextUrl.pathname; 
-
-    const publicRoutes = [
-      "/", 
-      "/auth/login", 
-      "/api/auth/signin",
-      "/auth/superadmin", 
-      "/auth/college", 
-      "/auth/department", 
-      "/auth/hod", 
-      "/auth/faculty", 
-      "/auth/student"
-    ];
-  if (publicRoutes.includes(pathname)) {
+  // ✅ Allow public routes (Improved to allow /auth/* sub-routes)
+  const publicRoutes = [
+    "/",
+    "/auth",
+    "/auth/login",
+    "/api/auth/signin",
+    "/auth/superadmin",
+    "/auth/college",
+    "/auth/department",
+    "/auth/hod",
+    "/auth/faculty",
+    "/auth/student",
+  ];
+  if (publicRoutes.some(route => pathname.startsWith(route))) {
     return NextResponse.next();
   }
 
+  // ✅ Unauthorized API requests return JSON instead of redirecting
   if (!token) {
+    if (pathname.startsWith("/api")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
-  const userRole : any = token.role;
+  // ✅ Prevent crashes if `role` is missing
+  const userRole: any = token.role || "UNKNOWN";
 
   const allowedRoutes = roleRoutes[userRole] || [];
   if (!allowedRoutes.some(route => pathname.startsWith(route))) {
-    return NextResponse.redirect(new URL("/", req.url)); // Redirect unauthorized users
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   return NextResponse.next(); // ✅ Allow request to proceed
@@ -55,5 +61,7 @@ export const config = {
     "/hod/:path*",
     "/faculty/:path*",
     "/student/:path*",
+    "/api/admin/:path*", // ✅ Secure API routes for admin
+    "/api/college/:path*", // ✅ Secure API routes for colleges
   ],
 };
